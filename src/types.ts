@@ -22,11 +22,19 @@ export interface TestSpec {
   framework?: string;
 }
 
+export interface StepResult {
+  step: TestStep;
+  status: TestStatus;
+  durationMs: number;
+  detail?: string;
+  error?: string;
+}
+
 export interface TestResult {
   specName: string;
   status: TestStatus;
   durationMs: number;
-  steps: { step: TestStep; status: TestStatus; error?: string; healed?: boolean }[];
+  steps: StepResult[];
   screenshot?: string;
   retries: number;
 }

@@ -38,7 +38,7 @@ function genPython(spec: TestSpec): string {
       case "type": return `    page.fill("${s.selector}", "${s.text}")`;
       case "assert": return `    expect(page.locator("${s.selector}")).to_be_visible()`;
       case "screenshot": return `    page.screenshot(path="${spec.name}.png")`;
-      case "request": return `    res = page.request.${(s.method||"get").lower()}("${s.url}")`;
+      case "request": return `    res = page.request.${(s.method||"get").toLowerCase()}("${s.url}")`;
       case "wait": return `    page.wait_for_timeout(${s.timeoutMs || 1000})`;
       default: return `    # ${s.kind}`;
     }

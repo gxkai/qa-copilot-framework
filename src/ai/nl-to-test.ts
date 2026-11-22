@@ -13,6 +13,8 @@ const PATTERNS: Pattern[] = [
   { re: /^(?:go to|visit|navigate to)\s+(.+)$/i, build: (m) => ({ kind: "navigate", url: m[1] }) },
   // click: "click Submit", "press Login button"
   { re: /^(?:click|press|tap)\s+(.+)$/i, build: (m) => ({ kind: "click", selector: m[1], text: m[1] }) },
+  // type email shorthand: "enter email qa@example.test"
+  { re: /^enter\s+email\s+(\S+@\S+)$/i, build: (m) => ({ kind: "type", text: m[1], selector: 'input[type="email"]' }) },
   // type: "type hello into #email", "enter hello in email field"
   { re: /^(?:type|enter|input)\s+(.+?)\s+(?:into|in)\s+(.+)$/i, build: (m) => ({ kind: "type", text: m[1], selector: m[2] }) },
   // assert visible: "verify dashboard visible", "assert #modal visible"
@@ -44,10 +46,12 @@ export function parseStep(nl: string): TestStep | null {
 /** Parse a full natural language test into a TestSpec. */
 export function parseTest(name: string, nl: string): TestSpec {
   const lines = nl.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+  if (lines.length === 0) throw new Error("Natural-language tests must contain at least one step");
   const steps: TestStep[] = [];
   for (const line of lines) {
     const step = parseStep(line);
-    if (step) steps.push(step);
+    if (!step) throw new Error(`Could not parse natural-language step: "${line}"`);
+    steps.push(step);
   }
   return { name, steps, tags: ["ai-generated"] };
 }
