@@ -20,6 +20,14 @@ describe("nl-to-test — parseStep", () => {
     assert.equal(s?.text, "hello");
     assert.equal(s?.selector, "#email");
   });
+  test("parses email-entry shorthand", () => {
+    const s = parseStep("Enter email qa@example.test");
+    assert.deepEqual(s, {
+      kind: "type",
+      selector: 'input[type="email"]',
+      text: "qa@example.test",
+    });
+  });
   test("parses assert visible", () => {
     const s = parseStep("verify .dashboard visible");
     assert.equal(s?.kind, "assert");

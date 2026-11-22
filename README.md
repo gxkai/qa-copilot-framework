@@ -147,7 +147,7 @@ take screenshot
 
 The target URL is the first navigation. Relative navigation and HTTP request URLs resolve against that URL.
 
-Enter one natural-language step per line or separate steps with commas. Supported steps include `go to URL`, `click Submit`, `type hello into #email`, `verify #dashboard visible`, `verify 'Hello' in .greeting`, `send GET to /api/users`, `wait 3 seconds`, and `take screenshot`. The API rejects empty input and any unparsed step.
+Enter one natural-language step per line or separate steps with commas. Supported steps include `go to URL`, `click Submit`, `type hello into #email`, `enter email qa@example.test`, `verify #dashboard visible`, `verify 'Hello' in .greeting`, `send GET to /api/users`, `wait 3 seconds`, and `take screenshot`. The email shorthand targets `input[type="email"]`. The API rejects empty input and any unparsed step.
 
 ### Destination allowlist
 

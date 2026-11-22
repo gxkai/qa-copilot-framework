@@ -13,6 +13,8 @@ const PATTERNS: Pattern[] = [
   { re: /^(?:go to|visit|navigate to)\s+(.+)$/i, build: (m) => ({ kind: "navigate", url: m[1] }) },
   // click: "click Submit", "press Login button"
   { re: /^(?:click|press|tap)\s+(.+)$/i, build: (m) => ({ kind: "click", selector: m[1], text: m[1] }) },
+  // type email shorthand: "enter email qa@example.test"
+  { re: /^enter\s+email\s+(\S+@\S+)$/i, build: (m) => ({ kind: "type", text: m[1], selector: 'input[type="email"]' }) },
   // type: "type hello into #email", "enter hello in email field"
   { re: /^(?:type|enter|input)\s+(.+?)\s+(?:into|in)\s+(.+)$/i, build: (m) => ({ kind: "type", text: m[1], selector: m[2] }) },
   // assert visible: "verify dashboard visible", "assert #modal visible"
