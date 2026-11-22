@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createRunPolicy, isAllowedDestination, parseRunRequest, resolveDestination } from "../src/run-policy.ts";
+import {
+  createRunPolicy,
+  isAllowedDestination,
+  isAllowedWebSocketDestination,
+  parseRunRequest,
+  resolveDestination,
+} from "../src/run-policy.ts";
 
 test("allows loopback HTTP(S) destinations but blocks other hosts by default", () => {
   const policy = createRunPolicy("");
@@ -21,6 +27,16 @@ test("configured origins match the exact normalized origin", () => {
   assert.equal(isAllowedDestination(new URL("https://qa.example:9443/path"), policy), false);
   assert.equal(isAllowedDestination(new URL("http://qa.example:8443/path"), policy), false);
   assert.throws(() => createRunPolicy("https://qa.example/path"), /exact HTTP\(S\) origins/);
+});
+
+test("WebSocket schemes use the same loopback and exact-origin policy", () => {
+  const policy = createRunPolicy("https://qa.example:8443");
+
+  assert.equal(isAllowedWebSocketDestination(new URL("ws://127.0.0.1:4304/socket"), policy), true);
+  assert.equal(isAllowedWebSocketDestination(new URL("wss://qa.example:8443/socket"), policy), true);
+  assert.equal(isAllowedWebSocketDestination(new URL("wss://qa.example:9443/socket"), policy), false);
+  assert.equal(isAllowedWebSocketDestination(new URL("wss://example.com/socket"), policy), false);
+  assert.equal(isAllowedWebSocketDestination(new URL("https://qa.example:8443/socket"), policy), false);
 });
 
 test("uses a supported optional Playwright browser channel", () => {

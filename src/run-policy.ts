@@ -121,6 +121,13 @@ export function isAllowedDestination(url: URL, policy: RunPolicy): boolean {
   );
 }
 
+export function isAllowedWebSocketDestination(url: URL, policy: RunPolicy): boolean {
+  if (url.protocol !== "ws:" && url.protocol !== "wss:") return false;
+  const httpURL = new URL(url.href);
+  httpURL.protocol = url.protocol === "ws:" ? "http:" : "https:";
+  return isAllowedDestination(httpURL, policy);
+}
+
 function parseAllowedOrigin(value: string): string {
   let url: URL;
   try {

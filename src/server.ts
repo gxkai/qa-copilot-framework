@@ -52,7 +52,7 @@ app.post("/api/nl-to-test", (req,r) => {
     const spec = parseTest(name, body.steps);
     r.json({ spec, description: describeSpec(spec) });
   } catch (error) {
-    r.status(400).json({ error: (error as Error).message });
+    r.status(400).json({ error: formatError(error) });
   }
 });
 
@@ -75,13 +75,13 @@ app.post("/api/run", async (req,r) => {
   try {
     request = parseRunRequest(req.body, runPolicy);
   } catch (error) {
-    return r.status(400).json({ error: (error as Error).message });
+    return r.status(400).json({ error: formatError(error) });
   }
   try {
     const results = await runSuite(request, runPolicy);
     r.json({ results, summary: summarizeSuite(results) });
   } catch (error) {
-    r.status(500).json({ error: (error as Error).message });
+    r.status(500).json({ error: formatError(error) });
   }
 });
 
@@ -109,6 +109,30 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
   if (status === 413) return res.status(413).json({ error: "JSON request body exceeds the 2 MB limit" });
   return res.status(500).json({ error: "Internal server error" });
 });
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) return error.message || error.name || "Unknown error";
+  if (typeof error === "string") return error || "Unknown error";
+  if (typeof error === "object" && error !== null && "message" in error) {
+    try {
+      const message = error.message;
+      if (typeof message === "string" && message) return message;
+    } catch {
+      // Fall back to serializing the unknown error.
+    }
+  }
+  try {
+    const serialized = JSON.stringify(error);
+    if (serialized !== undefined) return serialized;
+  } catch {
+    // Fall back to string conversion for cyclic or non-serializable values.
+  }
+  try {
+    return String(error);
+  } catch {
+    return "Unknown error";
+  }
+}
 
 const host = process.env.HOST ?? "127.0.0.1";
 const port = Number(process.env.PORT ?? FRAMEWORK_CONFIG.defaultPort);

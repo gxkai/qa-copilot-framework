@@ -30,6 +30,10 @@ before(async () => {
       response.writeHead(200, { "content-type": "text/html" }).end(
         '<img src="https://example.com/blocked.png">',
       );
+    } else if (url.pathname === "/external-websocket") {
+      response.writeHead(200, { "content-type": "text/html" }).end(
+        '<script>new WebSocket("wss://example.com/socket");</script>',
+      );
     } else if (url.pathname === "/json") {
       response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ ok: true }));
     } else {
@@ -181,6 +185,17 @@ test("blocks browser redirects and subresource requests outside the origin polic
     assert.equal(result.summary.failed, 1);
     assert.match(result.results[0].steps[0].error ?? "", /blocked browser request/i);
   }
+});
+
+test("blocks WebSocket handshakes outside the origin policy and reports the failed step", async () => {
+  const result = await run([{
+    name: "Blocked WebSocket destination",
+    steps: [{ kind: "navigate", url: `${targetOrigin}/external-websocket` }],
+  }]);
+
+  assert.equal(result.summary.failed, 1);
+  assert.equal(result.results[0].steps[0].status, "failed");
+  assert.match(result.results[0].steps[0].error ?? "", /blocked browser websocket/i);
 });
 
 test("rejects malformed specs and destinations outside the origin policy", async () => {

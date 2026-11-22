@@ -1,7 +1,13 @@
 import { chromium, type Browser, type Page } from "playwright";
 import type { ApiResponse } from "../capabilities/api-testing.js";
 import { assertResponse, executeRequest } from "../capabilities/api-testing.js";
-import { isAllowedDestination, resolveDestination, type RunPolicy, type RunRequest } from "../run-policy.js";
+import {
+  isAllowedDestination,
+  isAllowedWebSocketDestination,
+  resolveDestination,
+  type RunPolicy,
+  type RunRequest,
+} from "../run-policy.js";
 import type { StepResult, TestResult, TestSpec, TestStatus, TestStep } from "../types.js";
 import { runAfterSpec, runAfterStep, runBeforeSpec } from "../plugins/plugin-registry.js";
 
@@ -28,9 +34,6 @@ async function executeSpec(
 ): Promise<TestResult> {
   const startedAt = Date.now();
   const context = await browser.newContext({ serviceWorkers: "block" });
-  const page = await context.newPage();
-  page.setDefaultTimeout(policy.timeoutMs);
-
   const blockedRequests: string[] = [];
   await context.route("**/*", async route => {
     const rawURL = route.request().url();
@@ -56,6 +59,26 @@ async function executeSpec(
     blockedRequests.push(`Blocked browser request to ${url.origin || url.protocol} because the destination is not allowed`);
     await route.abort();
   });
+  await context.routeWebSocket(/.*/, async webSocket => {
+    let url: URL;
+    try {
+      url = new URL(webSocket.url());
+    } catch {
+      blockedRequests.push("Blocked a browser WebSocket connection with an invalid URL");
+      await webSocket.close({ code: 1008, reason: "Invalid WebSocket URL" });
+      return;
+    }
+
+    if (!isAllowedWebSocketDestination(url, policy)) {
+      blockedRequests.push(`Blocked browser WebSocket connection to ${url.origin} because the destination is not allowed`);
+      await webSocket.close({ code: 1008, reason: "Destination origin is not allowed" });
+      return;
+    }
+    webSocket.connectToServer();
+  });
+
+  const page = await context.newPage();
+  page.setDefaultTimeout(policy.timeoutMs);
 
   const stepResults: StepResult[] = [];
   let status: TestStatus = "passed";
