@@ -151,7 +151,7 @@ Enter one natural-language step per line or separate steps with commas. Supporte
 
 ### Destination allowlist
 
-The service binds to loopback (`127.0.0.1`) by default. Set `HOST` only when a different bind address is intentional. Test navigation, HTTP requests, redirects, and browser subresources are restricted to loopback destinations unless an exact additional origin is listed in `QA_ALLOWED_ORIGINS`:
+The service binds to loopback (`127.0.0.1`) by default. Set `HOST` only when a different bind address is intentional. Test navigation, HTTP requests, redirects, browser subresources, and WebSocket connections are restricted to loopback destinations unless an exact additional origin is listed in `QA_ALLOWED_ORIGINS`:
 
 ```bash
 QA_ALLOWED_ORIGINS="https://qa.example.com,https://staging.example.com:8443" npm run dev
