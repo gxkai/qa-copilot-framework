@@ -9,7 +9,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc --noEmit --skipLibCheck || true",
+    "build": "tsc",
     "dev": "tsx src/server.ts",
     "start": "tsx src/server.ts",
     "test": "node --import tsx --test tests/*.test.ts"

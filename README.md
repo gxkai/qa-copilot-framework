@@ -92,8 +92,9 @@ src/
 - **Java**: `com.microsoft.playwright` syntax
 
 ### Core Runner (`core/runner.ts`)
-- `runSpec()` — executes a TestSpec step-by-step, runs plugin hooks, collects results
-- `runSuite()` — runs multiple specs in parallel
+- `runSuite()` — shares one headless Chromium process across a suite, with an isolated browser context per spec
+- Executes navigation, clicks, text entry, assertions, waits, screenshots, and real HTTP requests in step order
+- Returns each attempted step's status, duration, detail, and actionable error
 - `summarizeSuite()` — aggregate pass/fail/flaky + pass rate + duration
 
 ## API Endpoints
@@ -114,12 +115,12 @@ src/
 ## Tests
 
 ```bash
-npm test    # 30 unit tests
+npm test
 ```
 
-- `tests/nl-to-test.test.ts` — 12 tests: 10 NL patterns + multi-step parsing + describeSpec
-- `tests/self-healer.test.ts` — 5 tests: extractKeyword (3) + healSelector (2)
-- `tests/visual-regression.test.ts` — 13 tests: visual diff (5) + a11y (5) + plugin registry (5)
+The browser-runner acceptance tests require Playwright Chromium. Install it once with `npx playwright install chromium --only-shell`.
+Set `QA_BROWSER_CHANNEL=chrome` or `QA_BROWSER_CHANNEL=msedge` to use an installed browser instead of the bundled Chromium.
+Run `QA_BROWSER_CHANNEL=chrome npm test` when Chrome is installed but the bundled browser is not.
 
 ## Docker
 
@@ -131,9 +132,32 @@ docker compose -f docker/docker-compose.yml up -d   # Browserless Chrome + WireM
 
 ```bash
 npm install
-npm test          # 30 tests
-npm run dev       # → http://localhost:4304
+npx playwright install chromium --only-shell
+npm test
+npm run dev
 ```
+
+The dashboard opens at `http://127.0.0.1:4304` by default. Enter a target URL and natural-language steps, one per line or separated by commas, then select **Run test**. For example:
+
+```text
+click Submit
+verify .dashboard visible
+take screenshot
+```
+
+The target URL is the first navigation. Relative navigation and HTTP request URLs resolve against that URL.
+
+Enter one natural-language step per line or separate steps with commas. Supported steps include `go to URL`, `click Submit`, `type hello into #email`, `verify #dashboard visible`, `verify 'Hello' in .greeting`, `send GET to /api/users`, `wait 3 seconds`, and `take screenshot`. The API rejects empty input and any unparsed step.
+
+### Destination allowlist
+
+The service binds to loopback (`127.0.0.1`) by default. Set `HOST` only when a different bind address is intentional. Test navigation, HTTP requests, redirects, and browser subresources are restricted to loopback destinations unless an exact additional origin is listed in `QA_ALLOWED_ORIGINS`:
+
+```bash
+QA_ALLOWED_ORIGINS="https://qa.example.com,https://staging.example.com:8443" npm run dev
+```
+
+Each entry must be an HTTP(S) origin with no path, query, credentials, or fragment. Invalid entries stop the service at startup. Use only origins you are authorized to test.
 
 ## Stack
 TypeScript · Rust (execution layer) · LLM APIs · OpenCV (pixel diff) · Playwright core · Docker

@@ -44,10 +44,12 @@ export function parseStep(nl: string): TestStep | null {
 /** Parse a full natural language test into a TestSpec. */
 export function parseTest(name: string, nl: string): TestSpec {
   const lines = nl.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+  if (lines.length === 0) throw new Error("Natural-language tests must contain at least one step");
   const steps: TestStep[] = [];
   for (const line of lines) {
     const step = parseStep(line);
-    if (step) steps.push(step);
+    if (!step) throw new Error(`Could not parse natural-language step: "${line}"`);
+    steps.push(step);
   }
   return { name, steps, tags: ["ai-generated"] };
 }

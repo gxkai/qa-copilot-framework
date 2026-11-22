@@ -69,6 +69,10 @@ describe("nl-to-test — parseTest", () => {
     const spec = parseTest("Multi", "go to /page\nclick Submit\nverify .result visible");
     assert.ok(spec.steps.length >= 2);
   });
+  test("rejects empty or partially unparsed natural-language steps", () => {
+    assert.throws(() => parseTest("Empty", "  "), /at least one step/i);
+    assert.throws(() => parseTest("Partial", "click Submit, do something unknown"), /could not parse/i);
+  });
 });
 
 describe("nl-to-test — describeSpec", () => {

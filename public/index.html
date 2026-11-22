@@ -20,11 +20,31 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 14px;
 .lang-pill{padding:4px 12px;border-radius:999px;background:var(--p2);border:1px solid var(--bd);font-size:12px;color:var(--t)}
 .code{font-family:monospace;font-size:11px;background:#070a0e;border-radius:8px;padding:12px;color:var(--t);white-space:pre-wrap;overflow-x:auto}
 .nl{padding:12px 14px;border-bottom:1px solid var(--bd)}.nl .q{color:var(--b);font-size:12px;margin-bottom:6px}.nl .q::before{content:"💬 "}
+.runner-form{display:grid;gap:12px;padding:16px 18px}.runner-form label{display:grid;gap:5px;color:var(--dim);font-size:12px}
+.runner-form input,.runner-form textarea{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:7px;background:var(--bg);color:var(--fg);font:inherit}
+.runner-form textarea{min-height:110px;resize:vertical}.runner-form button{justify-self:start;padding:8px 14px;border:0;border-radius:7px;background:var(--b);color:#07111d;font-weight:700;cursor:pointer}
+.runner-form button:disabled{opacity:.6;cursor:wait}.runner-status{padding:0 18px 12px;color:var(--dim)}.run-results{padding:0 18px 16px}
+.run-result{border-top:1px solid var(--bd);padding:12px 0}.run-result h3{font-size:14px}.run-result ol{padding:8px 0 0 24px;color:var(--dim)}
+.run-result li{padding:3px 0}.run-result [data-status=failed]{color:var(--r)}.run-result [data-status=passed]{color:var(--g)}
+.run-screenshot{display:block;max-width:100%;max-height:420px;margin-top:12px;border:1px solid var(--bd);border-radius:8px}
 .grid2{display:grid;grid-template-columns:1fr;gap:20px}@media(min-width:1000px){.grid2{grid-template-columns:1fr 1fr}}
 footer{text-align:center;padding:28px;color:var(--d2);font-size:12px;border-top:1px solid var(--bd);margin-top:20px}
 </style></head><body>
 <header><div class="logo">✨</div><h1>QA Copilot</h1><span class="tag">Next-Gen Framework</span><div class="spacer"></div><span class="badge"><span class="dot"></span><span id="st">live</span></span></header>
 <main>
+<section class="panel"><h2>Run a test</h2>
+<form class="runner-form" id="run-form">
+<label for="target-url">Target URL
+<input id="target-url" name="targetURL" type="url" required autocomplete="url" placeholder="http://127.0.0.1:4304">
+</label>
+<label for="test-steps">Natural-language steps, one per line or comma
+<textarea id="test-steps" name="steps" required placeholder="click Submit&#10;verify .dashboard visible"></textarea>
+</label>
+<button id="run-test" type="submit">Run test</button>
+</form>
+<p class="runner-status" id="runner-status" role="status" aria-live="polite"></p>
+<div class="run-results" id="run-results"></div>
+</section>
 <div class="cards" id="cards"></div>
 <div class="panel"><h2>AI-Native Features (all built-in)</h2><div class="feat" id="feats"></div></div>
 <div class="grid2">
@@ -65,6 +85,57 @@ document.getElementById('plugs').innerHTML=d.plugins.map(p=>`<tr><td><code>${esc
 document.getElementById('langs').innerHTML=d.languages.map(l=>`<span class="lang-pill">${esc(l)}</span>`).join('');
 }catch(e){document.getElementById('st').textContent='unavailable';console.error('Unable to load dashboard:',e)}}
 function c(l,v,col){return `<div class="card ${col}"><div class="l">${l}</div><div class="v ${col}">${v}</div></div>`}
+const runForm=document.getElementById('run-form');
+const targetURLInput=document.getElementById('target-url');
+const runnerStatus=document.getElementById('runner-status');
+const runResults=document.getElementById('run-results');
+targetURLInput.value=location.origin;
+runForm.addEventListener('submit',async event=>{
+event.preventDefault();
+const button=document.getElementById('run-test');
+button.disabled=true;
+runnerStatus.textContent='Parsing test steps…';
+runResults.replaceChildren();
+try{
+const parseResponse=await fetch('/api/nl-to-test',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:'Dashboard test',steps:document.getElementById('test-steps').value})});
+const parsed=await parseResponse.json();
+if(!parseResponse.ok)throw new Error(parsed.error||`Step parsing failed (${parseResponse.status})`);
+parsed.spec.steps.unshift({kind:'navigate',url:targetURLInput.value});
+runnerStatus.textContent='Running test…';
+const response=await fetch('/api/run',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({specs:[parsed.spec],baseURL:targetURLInput.value})});
+const result=await response.json();
+if(!response.ok)throw new Error(result.error||`Test run failed (${response.status})`);
+runnerStatus.textContent=`${result.summary.passed} passed · ${result.summary.failed} failed`;
+for(const spec of result.results){
+const article=document.createElement('article');
+article.className='run-result';
+const heading=document.createElement('h3');
+heading.textContent=`${spec.specName}: ${spec.status}`;
+heading.dataset.status=spec.status;
+article.append(heading);
+const steps=document.createElement('ol');
+for(const [index,step] of spec.steps.entries()){
+const item=document.createElement('li');
+item.dataset.status=step.status;
+item.textContent=`${index+1}. ${step.step.kind} — ${step.status} — ${step.durationMs}ms${step.detail?` · ${step.detail}`:''}${step.error?` · ${step.error}`:''}`;
+steps.append(item);
+}
+article.append(steps);
+if(spec.screenshot){
+const image=document.createElement('img');
+image.className='run-screenshot';
+image.src=spec.screenshot;
+image.alt=`Screenshot from ${spec.specName}`;
+article.append(image);
+}
+runResults.append(article);
+}
+}catch(error){
+runnerStatus.textContent=error instanceof Error?error.message:'Test run failed';
+}finally{
+button.disabled=false;
+}
+});
 load();setInterval(load,5000);
 </script>
 </body></html>
