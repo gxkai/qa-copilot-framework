@@ -29,8 +29,8 @@ footer{text-align:center;padding:28px;color:var(--d2);font-size:12px;border-top:
 <div class="panel"><h2>AI-Native Features (all built-in)</h2><div class="feat" id="feats"></div></div>
 <div class="grid2">
 <div>
-<div class="panel"><h2>Natural Language → Test (LLM-generated)</h2><div id="nl"></div></div>
-<div class="panel"><h2>Plugin Ecosystem</h2><table><thead><tr><th>Plugin</th><th class="r">Downloads</th><th class="r">Stars</th></tr></thead><tbody id="plugs"></tbody></table></div>
+<div class="panel"><h2>Natural Language → Test API</h2><div id="nl"></div></div>
+<div class="panel"><h2>Plugin Ecosystem</h2><table><thead><tr><th>Plugin</th><th>Version</th><th>Capabilities</th></tr></thead><tbody id="plugs"></tbody></table></div>
 </div>
 <div>
 <div class="panel"><h2>Multi-Language Support</h2><div class="langs" id="langs"></div></div>
@@ -48,19 +48,22 @@ footer{text-align:center;padding:28px;color:var(--d2);font-size:12px;border-top:
 <script>
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]))}
 async function load(){try{
-const r=await fetch('/api/status');const d=await r.json();
+const r=await fetch('/api/status');
+if(!r.ok)throw new Error(`API returned ${r.status}`);
+const d=await r.json();
+if(!Array.isArray(d.plugins)||!Array.isArray(d.capabilities)||!Array.isArray(d.languages))throw new Error('Unexpected /api/status response');
 document.getElementById('st').textContent=`${d.stars.toLocaleString()} stars · ${d.healedToday} healed today`;
 document.getElementById('cards').innerHTML=[
  c('GitHub Stars','⭐ '+d.stars.toLocaleString(),'y'),
- c('Downloads',d.downloads.toLocaleString(),'b'),
+ c('Plugins',d.plugins.length,'b'),
  c('Healed Today',d.healedToday,'g'),
  c('Languages',d.languages.length,'t'),
 ].join('');
-document.getElementById('feats').innerHTML=d.features.map(f=>`<div class="feat-item"><span class="ic">${f.icon}</span><span class="n">${f.name}</span><span class="on">● on</span></div>`).join('');
-document.getElementById('nl').innerHTML=d.nlExamples.map(e=>`<div class="nl"><div class="q">${esc(e.nl)}</div><div class="code">${esc(e.generated)}</div></div>`).join('');
-document.getElementById('plugs').innerHTML=d.plugins.map(p=>`<tr><td><code>${esc(p.name)}</code></td><td class="r">${p.downloads.toLocaleString()}</td><td class="r">⭐ ${p.stars.toLocaleString()}</td></tr>`).join('');
-document.getElementById('langs').innerHTML=d.languages.map(l=>`<span class="lang-pill">${l}</span>`).join('');
-}catch(e){document.getElementById('st').textContent='offline'}}
+document.getElementById('feats').innerHTML=d.capabilities.map(f=>`<div class="feat-item"><span class="ic">✓</span><span class="n">${esc(f)}</span><span class="on">● on</span></div>`).join('');
+document.getElementById('nl').innerHTML=`<div class="nl"><div class="q">POST /api/nl-to-test</div><div class="code">${esc(JSON.stringify({name:'Login test',steps:'click Submit'},null,2))}</div></div>`;
+document.getElementById('plugs').innerHTML=d.plugins.map(p=>`<tr><td><code>${esc(p.name)}</code></td><td>${esc(p.version)}</td><td>${esc(p.capabilities.join(', '))}</td></tr>`).join('');
+document.getElementById('langs').innerHTML=d.languages.map(l=>`<span class="lang-pill">${esc(l)}</span>`).join('');
+}catch(e){document.getElementById('st').textContent='unavailable';console.error('Unable to load dashboard:',e)}}
 function c(l,v,col){return `<div class="card ${col}"><div class="l">${l}</div><div class="v ${col}">${v}</div></div>`}
 load();setInterval(load,5000);
 </script>
